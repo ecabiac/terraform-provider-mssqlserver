@@ -12,7 +12,10 @@ import (
 )
 
 func resourceDatabaseUser() *schema.Resource {
+
 	return &schema.Resource{
+		Description: "Defines a database level User",
+
 		CreateContext: resourceDatabaseUserCreate,
 		ReadContext:   resourceDatabaseUserRead,
 		UpdateContext: resourceDatabaseUserUpdate,

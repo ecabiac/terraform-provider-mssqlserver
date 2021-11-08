@@ -49,10 +49,7 @@ func Provider() *schema.Provider {
 			"mssqlserver_user_login": resourceDatabaseUserLogin(),
 		},
 
-		DataSourcesMap: map[string]*schema.Resource{
-			"mssqlserver_database_backup": dataSourceDatabaseBackup(),
-			"mssqlserver_server":          dataSourceDatabaseServer(),
-		},
+		DataSourcesMap: map[string]*schema.Resource{},
 
 		ConfigureContextFunc: providerConfigure,
 	}

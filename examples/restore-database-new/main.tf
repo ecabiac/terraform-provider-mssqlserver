@@ -13,7 +13,6 @@ resource "mssqlserver_database" "foo" {
 
   backup_restore {
       filename   = "/var/opt/mssql/data/foo_backup.bak"
-      originaldb = "<not needed>" // todo: remove this
       datafile   = "foo"
       logfile    = "foo_log"
   }

@@ -13,12 +13,15 @@ import (
 
 func resourceDatabaseUserLogin() *schema.Resource {
 	return &schema.Resource{
+		Description: "Defines a Link between an instance level Login and a database level User",
+
 		CreateContext: databaseUserLoginResourceCreate,
 		ReadContext:   databaseUserLoginResourceRead,
 		UpdateContext: databaseUserLoginResourceUpdate,
 		DeleteContext: databaseUserLoginResourceDelete,
 
 		Schema: map[string]*schema.Schema{
+
 			"database": {
 				Type:     schema.TypeString,
 				Required: true,

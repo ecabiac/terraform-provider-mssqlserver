@@ -6,7 +6,6 @@ import (
 	"log"
 	"strconv"
 
-	//"mssqlserver"
 	"github.com/ecabiac/terraform-provider-mssqlserver/mssqlserver"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -38,9 +37,11 @@ func resourceDatabase() *schema.Resource {
 				Default:  false,
 			},
 			"backup_restore": {
-				Type:     schema.TypeSet,
-				MaxItems: 1,
-				Optional: true,
+				Type:        schema.TypeSet,
+				MaxItems:    1,
+				Optional:    true,
+				Description: "Describes a database backup to use as the basis when the database is created",
+
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"filename": {
@@ -48,33 +49,15 @@ func resourceDatabase() *schema.Resource {
 							Optional:    true,
 							Description: "The full path to the .bak file",
 						},
-						"originaldb": {
-							Type:     schema.TypeString,
-							Optional: true,
-						},
 						"datafile": {
-							Type:     schema.TypeString,
-							Optional: true,
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "The name of the data file inside the backup",
 						},
 						"logfile": {
-							Type:     schema.TypeString,
-							Optional: true,
-						},
-					},
-				},
-			},
-			"user_logins": {
-				Type:     schema.TypeSet,
-				Optional: true,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"username": {
-							Type:     schema.TypeString,
-							Required: true,
-						},
-						"login": {
-							Type:     schema.TypeString,
-							Required: true,
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "The name of the log file inside the backup",
 						},
 					},
 				},
@@ -103,15 +86,6 @@ func resourceDatabaseCreate(ctx context.Context, d *schema.ResourceData, m inter
 	if backupOk {
 		dbData := backupData.(*schema.Set).List()
 		dbDataItem := dbData[0].(map[string]interface{})
-		//dbBackup := &DatabaseBackup{
-		//	FileName:   dbDataItem["filename"].(string),
-		//	OriginalDb: dbDataItem["originaldb"].(string),
-		//	DataFile:   dbDataItem["datafile"].(string),
-		//	LogFile:    dbDataItem["logfile"].(string),
-		//}
-
-		//restoreDataFilePath := fmt.Sprintf("/var/opt/mssql/data%s.mdf", name)
-		//restoreLogFilePath := fmt.Sprintf("/var/opt/mssql/data%s.ldf", name)
 
 		backupInfo := &mssqlserver.DatabaseBackupFileInfo{
 			Path:         dbDataItem["filename"].(string),
@@ -132,14 +106,6 @@ func resourceDatabaseCreate(ctx context.Context, d *schema.ResourceData, m inter
 
 		d.SetId(name)
 		return nil
-		//createCommand = fmt.Sprintf("RESTORE DATABASE %s FROM DISK = N'%s' WITH  FILE = 2, MOVE N'%s' TO N'%s', MOVE N'%s' TO N'%s', NOUNLOAD, STATS = 5",
-		//	name,
-		//	dbBackup.FileName,
-		//	dbBackup.DataFile,
-		//	restoreDataFilePath,
-		//	dbBackup.LogFile,
-		//	restoreLogFilePath,
-		//)
 	}
 
 	err = dbManager.Create()

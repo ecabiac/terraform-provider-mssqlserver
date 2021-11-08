@@ -3,12 +3,12 @@
 page_title: "mssqlserver_user Resource - terraform-provider-mssqlserver"
 subcategory: ""
 description: |-
-  
+  Defines a database level User
 ---
 
 # mssqlserver_user (Resource)
 
-
+Defines a database level User
 
 
 

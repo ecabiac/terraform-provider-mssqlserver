@@ -3,12 +3,12 @@
 page_title: "mssqlserver_user_login Resource - terraform-provider-mssqlserver"
 subcategory: ""
 description: |-
-  
+  Defines a Link between an instance level Login and a database level User
 ---
 
 # mssqlserver_user_login (Resource)
 
-
+Defines a Link between an instance level Login and a database level User
 
 
 

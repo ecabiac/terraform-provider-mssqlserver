@@ -21,10 +21,9 @@ description: |-
 
 ### Optional
 
-- **backup_restore** (Block Set, Max: 1) (see [below for nested schema](#nestedblock--backup_restore))
+- **backup_restore** (Block Set, Max: 1) Describes a database backup to use as the basis when the database is created (see [below for nested schema](#nestedblock--backup_restore))
 - **drop_on_destroy** (Boolean)
 - **id** (String) The ID of this resource.
-- **user_logins** (Block Set) (see [below for nested schema](#nestedblock--user_logins))
 
 <a id="nestedblock--backup_restore"></a>
 ### Nested Schema for `backup_restore`
@@ -34,14 +33,5 @@ Optional:
 - **datafile** (String) The name of the data file inside the backup
 - **filename** (String) The full path to the .bak file
 - **logfile** (String) The name of the log file inside the backup
-
-
-<a id="nestedblock--user_logins"></a>
-### Nested Schema for `user_logins`
-
-Required:
-
-- **login** (String)
-- **username** (String)
 
 

@@ -14,8 +14,14 @@ type DatabaseManager struct {
 }
 
 type DatabaseUser struct {
-	Name  string
-	Login string
+	Name          string
+	DefaultSchema string
+	Login         string
+}
+
+type DatabaseUserCreate struct {
+	Name          string
+	DefaultSchema string
 }
 
 type databaseCountRecord struct {
@@ -28,18 +34,39 @@ type databaseNameRecord struct {
 
 func (dbManager *DatabaseManager) Drop() error {
 
-	_, err := dbManager.Db.Exec(fmt.Sprintf("USE master; ALTER DATABASE %s SET SINGLE_USER WITH ROLLBACK IMMEDIATE;", dbManager.Name))
+	cmd := fmt.Sprintf("USE master; ALTER DATABASE %s SET SINGLE_USER WITH ROLLBACK IMMEDIATE;", dbManager.Name)
+	setSingleUserFunc := func() error {
+		_, err := dbManager.Db.Exec(cmd)
+		return err
+	}
+
+	err := retry(3, time.Duration(time.Second), setSingleUserFunc)
+
 	if err != nil {
 		return fmt.Errorf("Failed to set database %s to single user mode for dropping database\n:%w", dbManager.Name, err)
 	}
 
-	_, err = dbManager.Db.Exec(fmt.Sprintf("exec('USE master; DROP DATABASE %s')", dbManager.Name))
+	cmd = fmt.Sprintf("exec('USE master; DROP DATABASE %s')", dbManager.Name)
+	dropDbFunc := func() error {
+		_, err := dbManager.Db.Exec(cmd)
+		return err
+	}
+
+	err = retry(3, time.Duration(time.Second), dropDbFunc)
+
 	if err != nil {
-		time.Sleep(2 * time.Second)
-		_, err = dbManager.Db.Exec(fmt.Sprintf("exec('USE master; DROP DATABASE %s')", dbManager.Name))
-		if err != nil {
-			return fmt.Errorf("Failed to drop database %s:\n%w", dbManager.Name, err)
-		}
+		return fmt.Errorf("Failed to drop database %s:\n%w", dbManager.Name, err)
+	}
+
+	return nil
+}
+
+func (dbManager *DatabaseManager) DropUser(username string) error {
+
+	_, err := dbManager.Db.Exec(fmt.Sprintf("exec('use %s; drop user %s')", dbManager.Name, username))
+
+	if err != nil {
+		return fmt.Errorf("Failed to drop user %s:\n%w", username, err)
 	}
 
 	return nil
@@ -123,18 +150,30 @@ func (dbManager *DatabaseManager) GetUser(username string) (*DatabaseUser, error
 	var result DatabaseUser
 
 	queryString := `
-    select dp.name as UserName, sp.name as LoginName
+    select dp.name as UserName, dp.default_schema_name as DefaultSchema, sp.name as LoginName
     from [%s].[sys].[database_principals] dp
     LEFT OUTER JOIN [%s].[sys].[server_principals] sp on dp.sid = sp.sid
     where dp.type = 'S' AND dp.name = @p1;
     `
 	query := fmt.Sprintf(queryString, dbManager.Name, dbManager.Name)
-	err := dbManager.Db.QueryRow(query, username).Scan(&result.Name, &result.Login)
+	err := dbManager.Db.QueryRow(query, username).Scan(&result.Name, &result.DefaultSchema, &result.Login)
 	if err != nil {
 		return nil, err
 	}
 
 	return &result, nil
+}
+
+func (dbManager *DatabaseManager) CreateUser(userCreate *DatabaseUserCreate) (*DatabaseUser, error) {
+
+	query := fmt.Sprintf("use %s; CREATE USER \"%s\" with default_schema = %s;", dbManager.Name, userCreate.Name, userCreate.DefaultSchema)
+	_, err := dbManager.Db.Exec(query)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return dbManager.GetUser(userCreate.Name)
 }
 
 func (dbManager *DatabaseManager) AttachUser(userName string, loginName string) error {

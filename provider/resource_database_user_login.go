@@ -90,11 +90,6 @@ func databaseUserLoginResourceCreate(ctx context.Context, d *schema.ResourceData
 func databaseUserLoginResourceRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	dbServer := m.(*mssqlserver.MsSqlServerManager)
 
-	//dbName := d.Get("database").(string)
-	//dbManager := dbServer.GetDatabaseManager(dbName)
-
-	//exists, err := dbManager.DbExists()
-
 	id := d.Id()
 	v := strings.Split(id, ".")
 	dbName := v[0]
@@ -111,14 +106,6 @@ func databaseUserLoginResourceRead(ctx context.Context, d *schema.ResourceData, 
 		return diag.FromErr(fmt.Errorf("Couldn't resolve user"))
 	}
 
-	//loginRecord, err := dbServer.GetLoginByName(id)
-
-	//if err != nil {
-	//	err2 := fmt.Errorf("Error reading login %s\n%w", id, err)
-	//	return diag.FromErr(err2)
-	//}
-
-	//d.SetId(id)
 	d.Set("database", dbName)
 	d.Set("username", userRecord.Name)
 	d.Set("login", userRecord.Login)
@@ -131,14 +118,6 @@ func databaseUserLoginResourceUpdate(ctx context.Context, d *schema.ResourceData
 }
 
 func databaseUserLoginResourceDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	//dbServer := m.(*mssqlserver.MsSqlServerManager)
-	//
-	//loginName := d.Id()
-	//err := dbServer.DropLogin(loginName)
-	//
-	//if err != nil {
-	//	return diag.FromErr(err)
-	//}
 
 	return nil
 }

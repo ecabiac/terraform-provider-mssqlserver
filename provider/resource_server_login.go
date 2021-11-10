@@ -26,6 +26,10 @@ func resourceServerLogin() *schema.Resource {
 				Type:     schema.TypeString,
 				Required: true,
 			},
+			"default_database": {
+				Type:     schema.TypeString,
+				Required: true,
+			},
 			"sid": {
 				Type:     schema.TypeString,
 				Computed: true,
@@ -51,6 +55,7 @@ func serverLoginResourceCreate(ctx context.Context, d *schema.ResourceData, m in
 
 	name := d.Get("name").(string)
 	password := d.Get("password").(string)
+	defaultdb := d.Get("default_database").(string)
 
 	exists, err := dbServer.ServerLoginExists(name)
 	if err != nil {
@@ -59,14 +64,14 @@ func serverLoginResourceCreate(ctx context.Context, d *schema.ResourceData, m in
 
 	if exists == false {
 		loginCreate := &mssqlserver.ServerLoginCreate{
-			Name:     name,
-			Password: password,
+			Name:            name,
+			Password:        password,
+			DefaultDatabase: defaultdb,
 		}
 
 		_, err := dbServer.CreateLogin(loginCreate)
-		//_, err := db.Query(fmt.Sprintf("CREATE LOGIN \"%s\" WITH PASSWORD = '%s', CHECK_POLICY = OFF, CHECK_EXPIRATION = OFF", name, password))
+
 		if err != nil {
-			//return diag.FromErr(errors.New(fmt.Sprint("Failed to create login", err)))
 			return diag.FromErr(err)
 		}
 	}
@@ -112,6 +117,8 @@ func serverLoginResourceDelete(ctx context.Context, d *schema.ResourceData, m in
 	dbServer := m.(*mssqlserver.MsSqlServerManager)
 
 	loginName := d.Id()
+	_ = dbServer.KillLogins(loginName)
+
 	err := dbServer.DropLogin(loginName)
 
 	if err != nil {

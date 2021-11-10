@@ -4,6 +4,8 @@ import (
 	"database/sql"
 	"encoding/base64"
 	"fmt"
+	"log"
+	"time"
 )
 
 type ServerLoginRecord struct {
@@ -13,8 +15,21 @@ type ServerLoginRecord struct {
 }
 
 type ServerLoginCreate struct {
-	Name     string
-	Password string
+	Name            string
+	Password        string
+	DefaultDatabase string
+}
+
+type whoRecord struct {
+	Spid      int
+	Ecid      int
+	Status    string
+	LoginName string
+	HostName  string
+	Blk       string
+	DbName    sql.NullString
+	Cmd       sql.NullString
+	RequestId int
 }
 
 // GetLoginByName retrieves a Sql Server instance login principal
@@ -54,7 +69,7 @@ func (dbServer *MsSqlServerManager) ServerLoginExists(username string) (bool, er
 // or the password
 func (dbServer *MsSqlServerManager) CreateLogin(login *ServerLoginCreate) (*ServerLoginRecord, error) {
 
-	cmd := fmt.Sprintf("CREATE LOGIN [%s] WITH PASSWORD = '%s', CHECK_POLICY = OFF, CHECK_EXPIRATION = OFF", login.Name, login.Password)
+	cmd := fmt.Sprintf("CREATE LOGIN [%s] WITH PASSWORD = '%s', DEFAULT_DATABASE = [%s], CHECK_POLICY = OFF, CHECK_EXPIRATION = OFF", login.Name, login.Password, login.DefaultDatabase)
 	_, err := dbServer.Db.Exec(cmd)
 
 	if err != nil {
@@ -66,9 +81,37 @@ func (dbServer *MsSqlServerManager) CreateLogin(login *ServerLoginCreate) (*Serv
 }
 
 func (dbServer *MsSqlServerManager) DropLogin(loginName string) error {
-
 	cmd := fmt.Sprintf("DROP LOGIN [%s]", loginName)
-	_, err := dbServer.Db.Exec(cmd)
+	retryFunc := func() error {
+		_, err := dbServer.Db.Exec(cmd)
+		return err
+	}
+
+	err := retry(3, time.Duration(time.Second), retryFunc)
+
+	return err
+}
+
+func (dbServer *MsSqlServerManager) KillLogins(loginName string) error {
+
+	var resultRow whoRecord
+
+	// https://docs.microsoft.com/en-us/sql/t-sql/language-elements/kill-transact-sql?view=sql-server-ver15
+	// Requires the ALTER ANY CONNECTION permission. ALTER ANY CONNECTION is
+	// included with membership in the sysadmin or processadmin fixed server roles.
+	cmd := fmt.Sprintf("EXEC sp_who '%s'", loginName)
+	rows, err := dbServer.Db.Query(cmd)
+	for more := rows.Next(); more; more = rows.Next() {
+		err = rows.Scan(&resultRow.Spid, &resultRow.Ecid, &resultRow.Status, &resultRow.LoginName, &resultRow.HostName, &resultRow.Blk, &resultRow.DbName, &resultRow.Cmd, &resultRow.RequestId)
+
+		if err == nil {
+			cmd = fmt.Sprintf("Kill %d;", resultRow.Spid)
+			dbServer.Db.Exec(cmd)
+		} else {
+			log.Printf(err.Error())
+		}
+
+	}
 
 	return err
 }

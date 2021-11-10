@@ -2,10 +2,9 @@ package provider
 
 import (
 	"context"
-	"database/sql"
-	"errors"
 	"fmt"
 
+	"github.com/ecabiac/terraform-provider-mssqlserver/mssqlserver"
 	_ "github.com/ecabiac/terraform-provider-mssqlserver/mssqlserver"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -37,75 +36,68 @@ func resourceDatabaseUser() *schema.Resource {
 			},
 			"login": {
 				Type:     schema.TypeString,
-				Optional: true,
+				Computed: true,
 			},
 		},
 	}
 }
 
 func resourceDatabaseUserCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	db := m.(*sql.DB)
-	database := d.Get("database").(string)
+
+	dbServer := m.(*mssqlserver.MsSqlServerManager)
+
+	databaseName := d.Get("database").(string)
 	username := d.Get("username").(string)
-	password := d.Get("password").(string)
-	roles := d.Get("roles").(*schema.Set).List()
+	defaultSchema := d.Get("default_schema").(string)
 
-	row, err := checkLogin(db, username)
-	if err == sql.ErrNoRows {
-
-		_, err := db.Query(fmt.Sprintf("CREATE LOGIN \"%s\" WITH PASSWORD = '%s', CHECK_POLICY = OFF, CHECK_EXPIRATION = OFF", username, password))
-		if err != nil {
-			return diag.FromErr(errors.New(fmt.Sprint("Failed to create login", err)))
-		}
-
-		// TODO Schema?
-		_, err = db.Query(fmt.Sprintf("exec('use %s; CREATE USER \"%s\" FOR LOGIN \"%s\" with default_schema = dbo')", database, username, username))
-		//_, err = db.Query(fmt.Sprintf(  "CREATE USER \"%s\" FOR LOGIN \"%s\" with default_schema = dbo", username, username))
-		if err != nil {
-			return diag.FromErr(errors.New(fmt.Sprint("Failed to create user: ", err)))
-		}
-
-	}
-
-	row, err = checkLogin(db, username)
-	if err != nil {
-		return diag.FromErr(errors.New(fmt.Sprint("Unknow error occured:", err)))
-	}
-
-	for _, role := range roles {
-		_, err = db.Exec(fmt.Sprintf("exec('use %s; exec(''sp_addrolemember %s, %s '') ')", database, role, username))
-		if err != nil {
-			return diag.FromErr(errors.New(fmt.Sprint("Failed to add member to role:", err)))
-		}
-	}
-
-	d.SetId(fmt.Sprint(row.principal_id))
+	dbManager := dbServer.GetDatabaseManager(databaseName)
+	userExists, err := dbManager.UserExists(username)
 
 	if err != nil {
 		return diag.FromErr(err)
 	}
+
+	if userExists == true {
+		return diag.FromErr(fmt.Errorf("User already exists"))
+	}
+
+	userCreate := &mssqlserver.DatabaseUserCreate{
+		Name:          username,
+		DefaultSchema: defaultSchema,
+	}
+
+	_, err = dbManager.CreateUser(userCreate)
+
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	d.SetId(fmt.Sprintf("%s.%s", databaseName, username))
+
 	return nil
-
 }
-
-//SELECT [name]
-//FROM [sys].[database_principals]
-//WHERE [type] = N'S'
 
 func resourceDatabaseUserRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 
-	db := m.(*sql.DB)
-	row := db.QueryRow(fmt.Sprintf("SELECT name FROM master.sys.server_principals WHERE principal_id = %s", d.Id()))
-	var name string
-	err := row.Scan(&name)
-	if err == sql.ErrNoRows {
+	dbServer := m.(*mssqlserver.MsSqlServerManager)
+
+	databaseName := d.Get("database").(string)
+	username := d.Get("username").(string)
+	database := dbServer.GetDatabaseManager(databaseName)
+	dbUser, err := database.GetUser(username)
+
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	if dbUser == nil {
 		return nil
-	} else if err != nil {
-		return diag.FromErr(err)
 	}
-	if err := d.Set("username", name); err != nil {
-		return diag.FromErr(err)
-	}
+
+	d.Set("username", dbUser.Name)
+	d.Set("default_schema", dbUser.DefaultSchema)
+	d.Set("login", dbUser.Login)
+
 	return nil
 }
 
@@ -114,41 +106,36 @@ func resourceDatabaseUserUpdate(ctx context.Context, d *schema.ResourceData, m i
 }
 
 func resourceDatabaseUserDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	db := m.(*sql.DB)
-	database := d.Get("database").(string)
-	row := db.QueryRow(fmt.Sprintf("SELECT name FROM master.sys.server_principals WHERE principal_id = %s", d.Id()))
-	var name string
-	err := row.Scan(&name)
+	dbServer := m.(*mssqlserver.MsSqlServerManager)
 
-	if err != sql.ErrNoRows {
-		_, err = db.Query(fmt.Sprintf("DROP LOGIN %s", name))
-		if err != nil {
-			return diag.FromErr(errors.New(fmt.Sprint("Failed to drop login: ", err)))
-		}
+	databaseName := d.Get("database").(string)
+	username := d.Get("username").(string)
 
-		row, _ := checkDatabase(db, database)
-		if row != nil {
-			row, _ := checkUser(db, database, name)
-			if row != nil {
-				_, err = db.Query(fmt.Sprintf("exec('use %s; drop user %s');", database, name))
-				if err != nil {
-					return diag.FromErr(errors.New(fmt.Sprint("Failed to drop user: ", err)))
-				}
-			}
-		}
+	database := dbServer.GetDatabaseManager(databaseName)
 
-		// check if user exists
-		//SELECT [name]
-		//FROM [Beratungsmappe].[sys].[database_principals]
-		//WHERE [type] = N'S'
+	dbExists, err := database.DbExists()
 
-		//		row = db.Query(fmt.Sprintf("SELECT name FROM sys.server_principals WHERE principal_id = %s", d.Id()))
+	if err != nil {
+		return diag.FromErr(fmt.Errorf("Failed to determine Database status: %w", err))
+	}
 
-		//_, err = db.Query(fmt.Sprintf("exec('use %s; drop user %s');", database, name))
-		//if err != nil {
-		//	return errors.New(fmt.Sprint("Failed to drop user: ", err))
-		//}
+	if dbExists == false {
+		return nil
+	}
 
+	userExists, err := database.UserExists(username)
+	if err != nil {
+		return diag.FromErr(fmt.Errorf("Failed to determine user status: %w", err))
+	}
+
+	if userExists == false {
+		return nil
+	}
+
+	err = database.DropUser(username)
+
+	if err != nil {
+		return diag.FromErr(err)
 	}
 
 	return nil

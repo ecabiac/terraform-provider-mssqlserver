@@ -6,10 +6,12 @@
 
 
 This provider can manage databases as well as server level objects like Logins.
+
 ## Usage Example
 
 Requires Terraform 0.12.x and later, but 1.0 is recommended.
 
+### Provider Configuration
 > When using the provider with Terraform 0.13 and later, the recommended approach is to declare Provider versions in the root module Terraform configuration, using a `required_providers` block as per the following example. For previous versions, please continue to pin the version within the provider block.
 
 ```hcl

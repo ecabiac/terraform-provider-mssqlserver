@@ -17,17 +17,19 @@ description: |-
 
 ### Required
 
-- **name** (String)
-- **password** (String)
+- **name** (String) The name of the Login. Must be unique within the datbase server instance.
+- **password** (String, Sensitive) The password to use for the Login
 
 ### Optional
 
+- **default_database** (String) The default database to assign to a Login
+- **drop_on_destroy** (Boolean) A flag indicatintg that destroying the resource should drop the Login.
 - **id** (String) The ID of this resource.
 - **roles** (Set of String)
 
 ### Read-Only
 
-- **principal_id** (String)
-- **sid** (String)
+- **principal_id** (String) The principal id assigned to the Login
+- **sid** (String) The sid assigned to the Login
 
 

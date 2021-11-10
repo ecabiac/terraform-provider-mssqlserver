@@ -18,25 +18,38 @@ func resourceServerLogin() *schema.Resource {
 
 		Schema: map[string]*schema.Schema{
 			"name": {
-				Type:     schema.TypeString,
-				Required: true,
-				ForceNew: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				ForceNew:    true,
+				Description: "The name of the Login. Must be unique within the datbase server instance.",
 			},
 			"password": {
-				Type:     schema.TypeString,
-				Required: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				Description: "The password to use for the Login",
+				Sensitive:   true,
 			},
 			"default_database": {
-				Type:     schema.TypeString,
-				Required: true,
+				Type:        schema.TypeString,
+				Optional:    true,
+				Default:     "master",
+				Description: "The default database to assign to a Login",
+			},
+			"drop_on_destroy": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     false,
+				Description: "A flag indicatintg that destroying the resource should drop the Login.",
 			},
 			"sid": {
-				Type:     schema.TypeString,
-				Computed: true,
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "The sid assigned to the Login",
 			},
 			"principal_id": {
-				Type:     schema.TypeString,
-				Computed: true,
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "The principal id assigned to the Login",
 			},
 			"roles": {
 				Type: schema.TypeSet,
@@ -114,15 +127,18 @@ func serverLoginResourceUpdate(ctx context.Context, d *schema.ResourceData, m in
 }
 
 func serverLoginResourceDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	dbServer := m.(*mssqlserver.MsSqlServerManager)
+	dropOnDestroy := d.Get("drop_on_destroy").(bool)
 
-	loginName := d.Id()
-	_ = dbServer.KillLogins(loginName)
+	if dropOnDestroy {
+		dbServer := m.(*mssqlserver.MsSqlServerManager)
+		loginName := d.Id()
+		_ = dbServer.KillLogins(loginName)
 
-	err := dbServer.DropLogin(loginName)
+		err := dbServer.DropLogin(loginName)
 
-	if err != nil {
-		return diag.FromErr(err)
+		if err != nil {
+			return diag.FromErr(err)
+		}
 	}
 
 	return nil

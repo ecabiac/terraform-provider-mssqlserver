@@ -17,12 +17,12 @@ description: |-
 
 ### Required
 
-- **name** (String)
+- **name** (String) The name of the database
 
 ### Optional
 
-- **backup_restore** (Block Set, Max: 1) Describes a database backup to use as the basis when the database is created (see [below for nested schema](#nestedblock--backup_restore))
-- **drop_on_destroy** (Boolean)
+- **backup_restore** (Block Set, Max: 1) Describes a database backup file to use as the basis for creating the database (see [below for nested schema](#nestedblock--backup_restore))
+- **drop_on_destroy** (Boolean) A flag indicatintg that destroying the resource should drop the database.
 - **id** (String) The ID of this resource.
 
 <a id="nestedblock--backup_restore"></a>

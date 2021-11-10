@@ -24,6 +24,9 @@ Defines a database level User
 
 - **default_schema** (String)
 - **id** (String) The ID of this resource.
+
+### Read-Only
+
 - **login** (String)
 
 

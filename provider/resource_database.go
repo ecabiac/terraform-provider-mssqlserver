@@ -3,8 +3,6 @@ package provider
 import (
 	"context"
 	"database/sql"
-	"log"
-	"strconv"
 
 	"github.com/ecabiac/terraform-provider-mssqlserver/mssqlserver"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -27,20 +25,22 @@ func resourceDatabase() *schema.Resource {
 
 		Schema: map[string]*schema.Schema{
 			"name": {
-				Type:     schema.TypeString,
-				Required: true,
-				ForceNew: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				ForceNew:    true,
+				Description: "The name of the database",
 			},
 			"drop_on_destroy": {
-				Type:     schema.TypeBool,
-				Optional: true,
-				Default:  false,
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     false,
+				Description: "A flag indicatintg that destroying the resource should drop the database.",
 			},
 			"backup_restore": {
 				Type:        schema.TypeSet,
 				MaxItems:    1,
 				Optional:    true,
-				Description: "Describes a database backup to use as the basis when the database is created",
+				Description: "Describes a database backup file to use as the basis for creating the database",
 
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
@@ -142,8 +142,6 @@ func resourceDatabaseUpdate(ctx context.Context, d *schema.ResourceData, m inter
 
 func databaseResourceDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	dropOnDestroy := d.Get("drop_on_destroy").(bool)
-
-	log.Printf("[DEBUG] dropOnDestroy was: %s", strconv.FormatBool(dropOnDestroy))
 
 	if dropOnDestroy {
 

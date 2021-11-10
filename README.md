@@ -4,8 +4,10 @@
 
 # Terraform Provider for MSSQL Server (DBMS)
 
+This MSSQL Server DBMS provider for Terraform allows you to manage databases and logins in an existing SQL Server installation.
 
-This provider can manage databases as well as server level objects like Logins.
+The motivation for this provider is for use in automating ephemeral environments sharing an existing SQL Server instance.
+
 
 ## Usage Example
 

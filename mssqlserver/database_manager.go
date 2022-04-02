@@ -99,6 +99,7 @@ func (dbManager *DatabaseManager) Restore(backupFile *DatabaseBackupFileInfo, re
 	dataFileName := fmt.Sprintf("%s.mdf", dbManager.Name)
 	logFileName := fmt.Sprintf("%s.ldf", dbManager.Name)
 	restoreDataFilePath := filepath.Join(restoreInfo.DataFileDir, dataFileName)
+
 	//fmt.Sprintf("%s/%s.mdf", restoreInfo.DataFileDir, dbManager.Name)
 	restoreLogFilePath := filepath.Join(restoreInfo.LogFileDir, logFileName)
 	//fmt.Sprintf("%s/%s.ldf", restoreInfo.LogFileDir, dbManager.Name)

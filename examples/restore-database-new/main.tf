@@ -50,4 +50,5 @@ output "foo_login" {
 
 output "foo_password" {
   value = random_password.foo_password.result
+  sensitive = true
 }
